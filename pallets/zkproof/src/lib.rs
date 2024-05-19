@@ -30,6 +30,9 @@ pub mod pallet {
     #[pallet::storage]
     pub type ZkProofData<T: Config> = StorageMap<_, Twox64Concat, T::Hash, BoundedVec<u8, T::MaxJsonLength>, OptionQuery>;
 
+    #[pallet::storage]
+    pub type JwkRegistry<T: Config> = StorageMap<_, Twox64Concat, Vec<u8>, Vec<u8>, OptionQuery>;
+
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -41,12 +44,24 @@ pub mod pallet {
         },
 
         ZkProofRetrieved(T::Hash, Vec<u8>),
+        AddressDerived {
+            address: T::AccountId,
+        },
+        JwtValidated {
+            valid: bool,
+        },
+        JwkRegistryUpdated {
+            provider: Vec<u8>,
+        },
     }
 
     #[pallet::error]
     pub enum Error<T> {
         /// Erreur levée si la taille des données JSON dépasse la limite maximale.
-        ZkProofTooLarge
+        ZkProofTooLarge,
+        JwtValidationFailed,
+        JwkRegistryFetchFailed,
+        UnsupportedProvider,
     }
 
     #[pallet::call]
@@ -82,6 +97,39 @@ pub mod pallet {
             }
 
             Ok(().into())
+        }
+
+        #[pallet::weight(10_000)]
+        pub fn derive_address(origin: OriginFor<T>, jwt: Vec<u8>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            // Placeholder: Implement address derivation logic
+            let derived_address: T::AccountId = who.clone(); // Placeholder: Replace with actual derived address
+            Self::deposit_event(Event::AddressDerived { address: derived_address });
+            Ok(())
+        }
+
+        // 8. verify jwt signature
+        #[pallet::weight(10_000)]
+        pub fn validate_jwt(origin: OriginFor<T>, jwt: Vec<u8>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            // Placeholder: Implement JWT validation logic
+            let is_valid = true; // Placeholder: Replace with actual JWT validation result
+            Self::deposit_event(Event::JwtValidated { valid: is_valid });
+            Ok(())
+        }
+
+        // update jwk registry with public key(s)
+        #[pallet::weight(10_000)]
+        pub fn update_jwk_registry(origin: OriginFor<T>, provider: Vec<u8>, public_keys: Vec<Vec<u8>>) -> DispatchResult {
+            let _who = ensure_signed(origin)?;
+
+            for key in public_keys {
+                JwkRegistry::<T>::insert(provider.clone(), key.clone());
+            }
+
+            Self::deposit_event(Event::JwkRegistryUpdated { provider });
+
+            Ok(())
         }
     }
 }
