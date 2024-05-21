@@ -8,10 +8,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b33faf05-6690-4ab8-99ec-ce549f584d3c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runtime/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/runtime/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runtime/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/runtime/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pallets/zkproof/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/pallets/zkproof/src/lib.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -21,6 +19,10 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
+  <component name="KubernetesApiProvider"><![CDATA[{
+  "isMigrated": true
+}]]></component>
   <component name="MacroExpansionManager">
     <option name="directoryName" value="y7vogy7g" />
   </component>
@@ -140,6 +142,12 @@
       <workItem from="1714156357345" duration="866000" />
       <workItem from="1714157266920" duration="10438000" />
       <workItem from="1714197955292" duration="9764000" />
+      <workItem from="1715807841739" duration="376000" />
+      <workItem from="1716134527789" duration="597000" />
+      <workItem from="1716278952995" duration="1227000" />
+      <workItem from="1716284739910" duration="753000" />
+      <workItem from="1716293111500" duration="1576000" />
+      <workItem from="1716319862131" duration="3349000" />
     </task>
     <servers />
   </component>

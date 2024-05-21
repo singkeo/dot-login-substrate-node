@@ -1,6 +1,7 @@
 // We make sure this pallet uses `no_std` for compiling to Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::BoundedVec;
 pub use pallet::*;
 pub use scale_info::prelude::vec::Vec;
 
@@ -45,29 +46,25 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Erreur levée si la taille des données JSON dépasse la limite maximale.
-        ZkProofTooLarge
+        ZkProofTooLarge,
+        InvalidProof,
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Stocke les données JSON dans la blockchain.
         #[pallet::weight(10_000)]
         pub fn store_zk_proof(origin: OriginFor<T>, json: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             use frame_support::sp_runtime::traits::Hash;
-            // Conversion du Vec<u8> en BoundedVec<u8>, en vérifiant que la taille ne dépasse pas la limite.
             let proof_hash = T::Hashing::hash(&json);
-            log::info!("Storing ZK proof with hash: {:?}", proof_hash);
+
+            ensure!(proof_is_valid(&json), Error::<T>::InvalidProof);
 
             let bounded_json = BoundedVec::try_from(json).map_err(|_| Error::<T>::ZkProofTooLarge)?;
 
-            // Stockage des données JSON.
-            //ZkProofData::<T>::put(&bounded_json);
             ZkProofData::<T>::insert(proof_hash, bounded_json.clone());
 
-            // Émission d'un événement après la mise à jour du stockage.
             Self::deposit_event(Event::ZkProofStored { json: bounded_json, who, hash: proof_hash });
 
             Ok(())
@@ -84,4 +81,17 @@ pub mod pallet {
             Ok(().into())
         }
     }
+}
+
+fn proof_is_valid(proof_data: &[u8]) -> bool {
+    match core::str::from_utf8(proof_data) {
+        Ok(proof_str) => {
+            log::info!("Checking zkproof: {}", proof_str);
+        },
+        Err(e) => {
+            log::error!("Invalid zk proof provided: {:?}", e);
+            return false;
+        }
+    }
+    true
 }
