@@ -23,11 +23,30 @@ scale-info = { version = "2.10.0", default-features = false, features = [
     "derive",
 ] }
 
+#sp-ark-bls12-381 = { git = "https://github.com/paritytech/substrate-curves", default-features = false }
+#sp-ark-ed-on-bls12-381-bandersnatch = { git = "https://github.com/paritytech/substrate-curves", default-features = false }
+#ark-ed-on-bls12-381-bandersnatch = { version = "0.4.0", default-features = false }
+#ark-snark = { version = "0.4.0", default-features = false }
+#ark-scale = { version = "0.0.12", default-features = false, features = ["hazmat"] }
+
+ark-ec = { version = "0.4.0", default-features = false }
+ark-ff = { version = "0.4.0", default-features = false }
+ark-crypto-primitives = { version = "0.4.0", default-features = false, features = [ "r1cs", "snark" ] }
+ark-bls12-381 = { version = "0.4.0", features = ["curve"], default-features = false }
+ark-serialize = { version = "0.4.0", features = ["derive"], default-features = false }
+ark-std = { version = "0.4.0", default-features = false }
+ark-groth16 = { version = "0.4.0", features = ["r1cs"], default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.117", default-features = false }
+getrandom = { version = "0.2.15", features = ["js"], default-features = false }
+
 # frame deps
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-v1.9.0", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-v1.9.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-v1.9.0", default-features = false }
 log = "0.4.20"
+hex = { version = "0.4.3", default-features = false }
+base64 = { version = "0.22.0", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-v1.9.0" }
