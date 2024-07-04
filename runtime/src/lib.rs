@@ -256,7 +256,7 @@ impl pallet_template::Config for Runtime {
 
 impl pallet_zkproof::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type MaxJsonLength = ConstU32<5000>;
+	type MaxJsonLength = ConstU32<100000>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

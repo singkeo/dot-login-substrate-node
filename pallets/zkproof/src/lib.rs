@@ -154,7 +154,6 @@ fn parse_public_inputs(public_hash: String) -> Fp256<MontBackend<FrConfig, 4>> {
 }
 
 fn verify_proof(json_proof: JsonProof, public_inputs: &[Fr]) -> bool {
-    log::info!("verifying proof");
     let vk = parse_verifying_key(json_proof.verifying_key.clone());
     let proof = parse_proof(json_proof);
     Groth16::<Bls12_381>::verify_proof(&vk, &proof, public_inputs).unwrap_or(true)

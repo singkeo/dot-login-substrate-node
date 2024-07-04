@@ -9,9 +9,7 @@
   <component name="ChangeListManager">
     <list default="true" id="b33faf05-6690-4ab8-99ec-ce549f584d3c" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pallets/zkproof/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pallets/zkproof/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pallets/zkproof/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/pallets/zkproof/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runtime/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/runtime/src/lib.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -158,6 +156,8 @@
       <workItem from="1718405796886" duration="6856000" />
       <workItem from="1718982909656" duration="582000" />
       <workItem from="1719950665552" duration="12739000" />
+      <workItem from="1720119223137" duration="45000" />
+      <workItem from="1720119287699" duration="1710000" />
     </task>
     <servers />
   </component>
