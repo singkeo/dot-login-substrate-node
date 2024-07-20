@@ -84,21 +84,15 @@ pub mod pallet {
 }
 
 extern crate alloc;
-extern crate core;
 
 use alloc::string::String;
-use core::str::FromStr;
 use serde::{Deserialize, Serialize};
-use serde_json::{self, from_str, to_string};
+use serde_json::{self, from_str};
 
-use ark_bls12_381::{Bls12_381, Fq, Fq2, Fr, FrConfig, G1Affine, G1Projective, G2Affine, G2Projective};
-use ark_ec::pairing::prepare_g2;
-use ark_ff::{Field, Fp256, MontBackend, Zero};
-use ark_groth16::{Groth16, Proof, VerifyingKey, PreparedVerifyingKey};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, CanonicalSerializeWithFlags};
-use ark_std::rand::Rng;
-use base64::Engine;
-use hex;
+use ark_bls12_381::{Bls12_381, Fq, Fq2, Fr, FrConfig, G1Affine, G2Affine};
+use ark_ff::{Field, Fp256, MontBackend};
+use ark_groth16::{Groth16, Proof, PreparedVerifyingKey};
+use ark_serialize::{CanonicalDeserialize};
 use base64::{decode};
 use log::error;
 
@@ -165,13 +159,24 @@ fn pallet_verify_proof(proof_data: &[u8]) -> bool {
             let json_proof: JsonProof = from_str(proof_str).unwrap();
             let public_inputs = parse_public_inputs(json_proof.public_hash.clone());
 
-            verify_proof(json_proof, &[public_inputs])
+            let jwt_token = json_proof.jwt_token.clone();
+            return if verify_proof(json_proof, &[public_inputs]) {
+                return if validate_jwt(jwt_token) {
+                    true
+                } else {
+                    error!("FAIL VERIFICATION TOKEN JWT");
+                    false
+                }
+            } else {
+                error!("FAIL VERIFICATION ZK PROOF");
+                false
+            }
         }
         Err(e) => {
             log::error!("Invalid UTF-8 in zk proof data: {:?}", e);
             false
         }
-    }
+    };
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -181,6 +186,7 @@ struct JsonProof {
     c: G1Point,
     public_hash: String,
     verifying_key: String,
+    jwt_token: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -199,4 +205,117 @@ struct G2Point {
 struct G2Coordinates {
     c0: String,
     c1: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    iss: String,
+    // L'émetteur du token
+    azp: String,
+    // L'ID client autorisé
+    aud: String,
+    // Le destinataire du token, doit correspondre à l'ID client
+    sub: String,
+    // L'identifiant unique de l'utilisateur
+    nonce: String,
+    // Une chaîne utilisée pour associer une session client à un ID Token
+    nbf: i64,
+    // La date/heure avant laquelle le token n'est pas accepté (Not Before)
+    iat: i64,
+    // L'heure d'émission du token (Issued At)
+    exp: i64,
+    // L'heure d'expiration du token (Expire)
+    jti: String,
+    // Un identifiant unique pour le token (JWT ID)
+    email: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GoogleJwks {
+    keys: Vec<Jwk>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Jwk {
+    n: String,
+    #[serde(rename = "use")]
+    k_use: String,
+    kid: String,
+    alg: String,
+    kty: String,
+    e: String,
+}
+
+fn base64_url_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
+    let mut input = input.replace('-', "+").replace('_', "/");
+    while input.len() % 4 != 0 {
+        input.push('=');
+    }
+    base64::decode(&input)
+}
+fn validate_jwt(token: String) -> bool {
+    let jwks: GoogleJwks = get_google_jwks();
+
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 3 {
+        return false;
+    }
+
+    let header_part = parts[0];
+    let payload_part = parts[1];
+    let signature_part = parts[2];
+
+    let header_bytes = match base64_url_decode(header_part) {
+        Ok(bytes) => bytes,
+        Err(_) => return false,
+    };
+
+    let header_str = match core::str::from_utf8(&header_bytes) {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+
+    let header: serde_json::Value = match from_str(header_str) {
+        Ok(h) => h,
+        Err(_) => return false,
+    };
+
+    let kid = match header.get("kid") {
+        Some(k) => k.as_str().unwrap_or(""),
+        None => return false,
+    };
+
+    let jwk = match jwks.keys.iter().find(|k| k.kid == kid) {
+        Some(jwk) => jwk,
+        None => return false,
+    };
+
+    //TODO @Ahmed verify the last signature part with RSA
+
+    return true
+}
+
+//TODO @Ahmed to be retrieved from on off chain worker as JWK may be rotated.
+fn get_google_jwks() -> GoogleJwks {
+    let mut keys = Vec::new();
+
+    keys.push(Jwk {
+        alg: String::from("RS256"),
+        n: String::from("rv95jmy91hibD7cb_BCA25jv5HrX7WoqHv-fh8wrOR5aYcM8Kvsc3mbzs2w1vCUlMRv7NdEGVBEnOZ6tHvUzGLon4ythd5XsX-wTvAtIHPkyHdo5zGpTgATO9CEn78Y-f1E8By63ttv14kXe_RMjt5aKttK4yqqUyzWUexSs7pET2zWiigd0_bGhJGYYEJlEk_JsOBFvloIBaycMfDjK--kgqnlRA8SWUkP3pEJIAo9oHzmvX6uXZTEJK10a1YNj0JVR4wZY3k60NaUX-KCroreU85iYgnecyxSdL-trpKdkg0-2OYks-_2Isymu7jPX-uKVyi-zKyaok3N64mERRQ"),
+        e: String::from("AQAB"),
+        kty: String::from("RSA"),
+        k_use: String::from("sig"),
+        kid: String::from("0e345fd7e4a97271dffa991f5a893cd16b8e0827"),
+    });
+
+    keys.push(Jwk {
+        alg: String::from("RS256"),
+        n: String::from("zaUomGGU1qSBxBHOQRk5fF7rOVVzG5syHhJYociRyyvvMOM6Yx_n7QFrwKxW1Gv-YKPDsvs-ksSN5YsozOTb9Y2HlPsOXrnZHQTQIdjWcfUz-TLDknAdJsK3A0xZvq5ud7ElIrXPFS9UvUrXDbIv5ruv0w4pvkDrp_Xdhw32wakR5z0zmjilOHeEJ73JFoChOaVxoRfpXkFGON5ZTfiCoO9o0piPROLBKUtIg_uzMGzB6znWU8Yfv3UlGjS-ixApSltsXZHLZfat1sUvKmgT03eXV8EmNuMccrhLl5AvqKT6E5UsTheSB0veepQgX8XCEex-P3LCklisnen3UKOtLw"),
+        e: String::from("AQAB"),
+        kty: String::from("RSA"),
+        k_use: String::from("sig"),
+        kid: String::from("f2e11986282de93f27b264fd2a4de192993dcb8c"),
+    });
+
+    GoogleJwks { keys }
 }
