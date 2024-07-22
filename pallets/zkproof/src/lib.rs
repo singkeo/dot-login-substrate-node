@@ -13,67 +13,96 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
+    // The main struct for the pallet.
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
     /// The pallet's configuration trait.
     ///
-    /// All our types and constants a pallet depends on must be declared here.
+    /// All types and constants the pallet depends on must be declared here.
     /// These types are defined generically and made concrete when the pallet is declared in the
     /// `runtime/src/lib.rs` file of your chain.
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        /// The maximum length of the JSON data.
         type MaxJsonLength: Get<u32>;
     }
 
-    //pub type ZkProofData<T: Config> = StorageValue<_, BoundedVec<u8, T::MaxJsonLength>, ValueQuery>;
+    /// Storage map to hold the ZK proof data.
     #[pallet::storage]
     pub type ZkProofData<T: Config> = StorageMap<_, Twox64Concat, T::Hash, BoundedVec<u8, T::MaxJsonLength>, OptionQuery>;
 
+    /// Events emitted by the pallet.
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Un événement pour notifier que des données JSON ont été stockées.
+        /// Event emitted when ZK proof data is stored.
         ZkProofStored {
             json: BoundedVec<u8, T::MaxJsonLength>,
             who: T::AccountId,
             hash: T::Hash,
         },
-
+        /// Event emitted when ZK proof data is retrieved.
         ZkProofRetrieved(T::Hash, Vec<u8>),
     }
 
+    /// Errors that can occur in the pallet.
     #[pallet::error]
     pub enum Error<T> {
+        /// The ZK proof data is too large.
         ZkProofTooLarge,
+        /// The ZK proof is invalid.
         InvalidProof,
     }
 
+    /// Dispatchable functions of the pallet.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Store ZK proof data.
+        ///
+        /// # Parameters
+        /// - `origin`: The origin of the call (must be signed).
+        /// - `json`: The ZK proof data to store.
+        ///
+        /// # Errors
+        /// - `ZkProofTooLarge`: If the provided JSON data is too large.
+        /// - `InvalidProof`: If the ZK proof is invalid.
         #[pallet::weight({10_000})]
         pub fn store_zk_proof(origin: OriginFor<T>, json: Vec<u8>) -> DispatchResult {
+            // Ensure the origin of the call is signed.
             let who = ensure_signed(origin)?;
 
+            // Calculate the hash of the provided JSON data.
             use frame_support::sp_runtime::traits::Hash;
             let proof_hash = T::Hashing::hash(&json);
 
+            // Ensure the provided JSON data is a valid ZK proof.
             ensure!(pallet_verify_proof(&json), Error::<T>::InvalidProof);
 
+            // Convert the JSON data into a bounded vector.
             let bounded_json = BoundedVec::try_from(json).map_err(|_| Error::<T>::ZkProofTooLarge)?;
 
+            // Store the ZK proof data in the storage map.
             ZkProofData::<T>::insert(proof_hash, bounded_json.clone());
 
+            // Emit an event indicating the ZK proof data has been stored.
             Self::deposit_event(Event::ZkProofStored { json: bounded_json, who, hash: proof_hash });
 
             Ok(())
         }
 
+        /// Retrieve all stored ZK proofs.
+        ///
+        /// # Parameters
+        /// - `origin`: The origin of the call (must be signed).
         #[pallet::weight({10_000})]
         pub fn retrieve_all_zk_proofs(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            // Ensure the origin of the call is signed.
             let _who = ensure_signed(origin)?;
 
+            // Iterate over all stored ZK proofs and emit an event for each.
             for (proof_hash, zk_proof) in ZkProofData::<T>::iter() {
                 Self::deposit_event(Event::ZkProofRetrieved(proof_hash, zk_proof.to_vec()));
             }
@@ -97,11 +126,13 @@ use ark_serialize::CanonicalDeserialize;
 use base64::decode;
 use log::error;
 
+/// Decode a base64 string into a vector of bytes.
 fn decode_base64(data: String) -> Vec<u8> {
     #[allow(deprecated)]
     return decode(data).unwrap();
 }
 
+/// Parse a G1 point from its JSON representation.
 fn parse_g1_point(point: G1Point) -> G1Affine {
     let x_bytes = decode_base64(point.x);
     let y_bytes = decode_base64(point.y);
@@ -112,6 +143,7 @@ fn parse_g1_point(point: G1Point) -> G1Affine {
     return G1Affine::new(x_fq, y_fq);
 }
 
+/// Parse a G2 point from its JSON representation.
 fn parse_g2_point(point: G2Point) -> G2Affine {
     let x_c0_bytes = decode_base64(point.x.c0);
     let x_c1_bytes = decode_base64(point.x.c1);
@@ -129,6 +161,7 @@ fn parse_g2_point(point: G2Point) -> G2Affine {
     return G2Affine::new(x_fq2, y_fq2);
 }
 
+/// Parse a verifying key from its JSON representation.
 fn parse_verifying_key(json_vk: String) -> PreparedVerifyingKey<Bls12_381> {
     let vk_bytes = decode_base64(json_vk);
     PreparedVerifyingKey::<Bls12_381>::deserialize_compressed_unchecked(&*vk_bytes).unwrap_or_else(|e| {
@@ -137,6 +170,7 @@ fn parse_verifying_key(json_vk: String) -> PreparedVerifyingKey<Bls12_381> {
     })
 }
 
+/// Parse a proof from its JSON representation.
 fn parse_proof(proof: JsonProof) -> Proof<Bls12_381> {
     let a = parse_g1_point(proof.a);
     let b = parse_g2_point(proof.b);
@@ -144,17 +178,20 @@ fn parse_proof(proof: JsonProof) -> Proof<Bls12_381> {
     return Proof { a, b, c };
 }
 
+/// Parse public inputs from a base64-encoded string.
 fn parse_public_inputs(public_hash: String) -> Fp256<MontBackend<FrConfig, 4>> {
     let public_hash_bytes = decode_base64(public_hash);
     return Fr::from_random_bytes(public_hash_bytes.as_slice()).unwrap_or_default();
 }
 
+/// Verify a proof.
 fn verify_proof(json_proof: JsonProof, public_inputs: &[Fr]) -> bool {
     let vk = parse_verifying_key(json_proof.verifying_key.clone());
     let proof = parse_proof(json_proof);
     Groth16::<Bls12_381>::verify_proof(&vk, &proof, public_inputs).unwrap_or(true)
 }
 
+/// Verify a ZK proof from its raw data.
 fn pallet_verify_proof(proof_data: &[u8]) -> bool {
     return match core::str::from_utf8(proof_data) {
         Ok(proof_str) => {
@@ -181,6 +218,7 @@ fn pallet_verify_proof(proof_data: &[u8]) -> bool {
     };
 }
 
+/// Struct representing a JSON proof.
 #[derive(Serialize, Deserialize, Debug)]
 struct JsonProof {
     a: G1Point,
@@ -191,24 +229,28 @@ struct JsonProof {
     jwt_token: String,
 }
 
+/// Struct representing a G1 point.
 #[derive(Serialize, Deserialize, Debug)]
 struct G1Point {
     x: String,
     y: String,
 }
 
+/// Struct representing a G2 point.
 #[derive(Serialize, Deserialize, Debug)]
 struct G2Point {
     x: G2Coordinates,
     y: G2Coordinates,
 }
 
+/// Struct representing the coordinates of a G2 point.
 #[derive(Serialize, Deserialize, Debug)]
 struct G2Coordinates {
     c0: String,
     c1: String,
 }
 
+/// Struct representing claims in a JWT.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     iss: String,
@@ -232,11 +274,13 @@ pub struct Claims {
     email: String,
 }
 
+/// Struct representing Google's JSON Web Key Set (JWKS).
 #[derive(Debug, Deserialize)]
 struct GoogleJwks {
     keys: Vec<Jwk>,
 }
 
+/// Struct representing a JSON Web Key (JWK).
 #[derive(Debug, Deserialize)]
 struct Jwk {
     #[allow(dead_code)]
@@ -254,6 +298,7 @@ struct Jwk {
     e: String,
 }
 
+/// Decode a base64 URL string into a vector of bytes.
 fn base64_url_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
     let mut input = input.replace('-', "+").replace('_', "/");
     while input.len() % 4 != 0 {
@@ -263,6 +308,8 @@ fn base64_url_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
     #[allow(deprecated)]
     base64::decode(&input)
 }
+
+/// Validate a JWT.
 fn validate_jwt(token: String) -> bool {
     let jwks: GoogleJwks = get_google_jwks();
 
@@ -306,6 +353,7 @@ fn validate_jwt(token: String) -> bool {
 }
 
 //TODO @Ahmed to be retrieved from on off chain worker as JWK may be rotated.
+/// Retrieve Google's JSON Web Key Set (JWKS).
 fn get_google_jwks() -> GoogleJwks {
     let mut keys = Vec::new();
 
