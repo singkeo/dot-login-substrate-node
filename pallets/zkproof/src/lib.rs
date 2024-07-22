@@ -6,7 +6,7 @@ pub use pallet::*;
 pub use scale_info::prelude::vec::Vec;
 
 // All pallet logic is defined in its own module and must be annotated by the `pallet` attribute.
-#[frame_support::pallet]
+#[frame_support::pallet(dev_mode)]
 pub mod pallet {
     // Import various useful types required by all FRAME pallets.
     use super::*;
@@ -52,7 +52,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)]
+        #[pallet::weight({10_000})]
         pub fn store_zk_proof(origin: OriginFor<T>, json: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -70,7 +70,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight({10_000})]
         pub fn retrieve_all_zk_proofs(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let _who = ensure_signed(origin)?;
 
@@ -92,11 +92,13 @@ use serde_json::{self, from_str};
 use ark_bls12_381::{Bls12_381, Fq, Fq2, Fr, FrConfig, G1Affine, G2Affine};
 use ark_ff::{Field, Fp256, MontBackend};
 use ark_groth16::{Groth16, Proof, PreparedVerifyingKey};
-use ark_serialize::{CanonicalDeserialize};
-use base64::{decode};
+use ark_serialize::CanonicalDeserialize;
+#[allow(deprecated)]
+use base64::decode;
 use log::error;
 
 fn decode_base64(data: String) -> Vec<u8> {
+    #[allow(deprecated)]
     return decode(data).unwrap();
 }
 
@@ -237,12 +239,18 @@ struct GoogleJwks {
 
 #[derive(Debug, Deserialize)]
 struct Jwk {
+    #[allow(dead_code)]
     n: String,
     #[serde(rename = "use")]
+    #[allow(dead_code)]
     k_use: String,
+    #[allow(dead_code)]
     kid: String,
+    #[allow(dead_code)]
     alg: String,
+    #[allow(dead_code)]
     kty: String,
+    #[allow(dead_code)]
     e: String,
 }
 
@@ -251,6 +259,8 @@ fn base64_url_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
     while input.len() % 4 != 0 {
         input.push('=');
     }
+
+    #[allow(deprecated)]
     base64::decode(&input)
 }
 fn validate_jwt(token: String) -> bool {
@@ -262,8 +272,8 @@ fn validate_jwt(token: String) -> bool {
     }
 
     let header_part = parts[0];
-    let payload_part = parts[1];
-    let signature_part = parts[2];
+    let _payload_part = parts[1];
+    let _signature_part = parts[2];
 
     let header_bytes = match base64_url_decode(header_part) {
         Ok(bytes) => bytes,
@@ -285,7 +295,7 @@ fn validate_jwt(token: String) -> bool {
         None => return false,
     };
 
-    let jwk = match jwks.keys.iter().find(|k| k.kid == kid) {
+    let _jwk = match jwks.keys.iter().find(|k| k.kid == kid) {
         Some(jwk) => jwk,
         None => return false,
     };
