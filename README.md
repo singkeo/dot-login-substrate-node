@@ -1,6 +1,8 @@
-# Substrate Node Template
+# DOT Login Substrate Node
 
-A fresh [Substrate](https://substrate.io/) node, ready for hacking :rocket:
+![web3 foundation_grants_badge_black](https://github.com/user-attachments/assets/3c628f6d-36ef-4b18-bb9f-c96ec8a33a63)
+
+Based on the popular [Substrate Node Template](https://github.com/substrate-developer-hub/substrate-node-template) repo:
 
 A standalone version of this template is available for each release of Polkadot
 in the [Substrate Developer Hub Parachain
